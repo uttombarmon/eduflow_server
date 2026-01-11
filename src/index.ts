@@ -1,11 +1,13 @@
 import express from "express";
 import { AppError } from "./utils/AppError.js";
 import { globalErrorHandler } from "./middleware/errorHandler.js";
+import authRouter from "./routes/authRoutes.js";
 
 const app = express();
 app.use(express.json());
 
 // --- ROUTES ---
+app.use("/api/v1/auth", authRouter);
 
 // Express 5 AUTO-CATCHES async errors.
 // No more "catchAsync" or try/catch blocks needed!
