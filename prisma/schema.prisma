@@ -1,136 +1,15 @@
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "./generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model Category {
-  id     String   @id
-  name   String   @unique
-  Course Course[]
-}
-
-model Chapter {
-  id          String   @id
-  title       String
-  position    Int
-  isPublished Boolean  @default(false)
-  isFree      Boolean  @default(false)
-  courseId    String
-  Course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  Lesson      Lesson[]
-
-  @@index([courseId])
-}
-
-model Course {
-  id          String       @id
-  title       String
-  slug        String       @unique
-  description String?
-  thumbnail   String?
-  price       Decimal      @default(0) @db.Decimal(10, 2)
-  isPublished Boolean      @default(false)
-  tutorId     String
-  categoryId  String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime
-  Chapter     Chapter[]
-  Category    Category?    @relation(fields: [categoryId], references: [id])
-  Enrollment  Enrollment[]
-
-  @@index([tutorId])
-}
-
-model Enrollment {
-  id        String   @id
-  userId    String
-  courseId  String
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
   createdAt DateTime @default(now())
-  Course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, courseId])
-}
-
-model Lesson {
-  id           String         @id
-  title        String
-  content      String?
-  videoUrl     String?
-  position     Int
-  chapterId    String
-  Chapter      Chapter        @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  UserProgress UserProgress[]
-
-  @@index([chapterId])
-}
-
-model UserProgress {
-  id          String   @id
-  userId      String
-  lessonId    String
-  isCompleted Boolean  @default(false)
-  updatedAt   DateTime
-  Lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-}
-
-model account {
-  id                    String    @id
-  accountId             String
-  providerId            String
-  userId                String
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime
-  user                  user      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model session {
-  id        String   @id
-  expiresAt DateTime
-  token     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model user {
-  id            String    @id
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime
-  account       account[]
-  session       session[]
-}
-
-model verification {
-  id         String   @id
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime
-
-  @@index([identifier])
 }
