@@ -87,8 +87,8 @@ export const getCourseById = async (req: Request, res: Response) => {
   }
 };
 
-// upload course
-export const uploadCourse = async (req: Request, res: Response) => {
+// make new course
+export const makeCourse = async (req: Request, res: Response) => {
   try {
     const {
       title,
