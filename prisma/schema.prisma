@@ -7,10 +7,88 @@ datasource db {
   provider = "postgresql"
 }
 
+//enums
+enum UserRole {
+  student
+  tutor
+  admin
+}
+
+// user model
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  password  String
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  name            String?
+  email           String   @unique
+  role            UserRole @default(student)
+  avatar          String?
+  authoredCourses Course[] @relation("CourseInstructor")
+  posts           Post[]
+  password        String?
+  createdAt       DateTime @default(now())
+}
+
+//course model
+model Course {
+  id            String @id @default(uuid())
+  title         String
+  description   String
+  thumbnail     String
+  category      String
+  totalDuration String
+  level         String
+  price         Float
+  rating        Float  @default(0)
+  studentsCount Int    @default(0)
+
+  // Relations
+  instructorId String
+  instructor   User     @relation("CourseInstructor", fields: [instructorId], references: [id])
+  lessons      Lesson[]
+}
+
+model Lesson {
+  id          String  @id @default(uuid())
+  title       String
+  duration    String
+  videoUrl    String
+  content     String
+  isCompleted Boolean @default(false)
+
+  // Relations
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+  quizzes  Quiz[]
+}
+
+model Quiz {
+  id        String         @id @default(uuid())
+  lessonId  String
+  lesson    Lesson         @relation(fields: [lessonId], references: [id])
+  questions QuizQuestion[]
+}
+
+model QuizQuestion {
+  id            String   @id @default(uuid())
+  question      String
+  options       String[]
+  correctAnswer Int
+
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id])
+}
+
+model Notification {
+  id      String   @id @default(uuid())
+  message String
+  type    String
+  time    DateTime @default(now())
+}
+
+model Post {
+  id    Int    @id @default(autoincrement())
+  title String
+  body  String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 }
