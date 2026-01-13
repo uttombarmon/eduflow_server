@@ -4,7 +4,7 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const profileRouter: Router = Router();
 profileRouter.get("/:id", profileController.getFullProfile);
-profileRouter.get("/:id", profileController.getProjectsByTech);
+profileRouter.get("/getprojectsbytech", profileController.getProjectsByTech);
 
 // private routes
 profileRouter.post("/:id", protect, profileController.addProfile);

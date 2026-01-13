@@ -203,20 +203,20 @@ export const addProject = async (req: any, res: Response) => {
 
 // update project
 export const updateProject = async (req: any, res: Response) => {
-  const { id } = req.params;
+  const { pid } = req.params;
   const updateData = req.body;
 
   const project = await prisma.project.findFirst({
     where: {
-      id: id,
-      profile: { userId: req.user.id },
+      id: pid,
+      profile: { userId: req.user.pid },
     },
   });
 
   if (!project) throw new AppError("Project not found or unauthorized", 404);
 
   const updatedProject = await prisma.project.update({
-    where: { id: id },
+    where: { id: pid },
     data: updateData,
   });
 
@@ -225,12 +225,12 @@ export const updateProject = async (req: any, res: Response) => {
 
 // delete project
 export const deleteProject = async (req: any, res: Response) => {
-  const { id } = req.params;
+  const { pid } = req.params;
   const userId = req.user.id;
 
   const project = await prisma.project.findFirst({
     where: {
-      id: id,
+      id: pid,
       profile: {
         userId: userId,
       },
@@ -246,7 +246,7 @@ export const deleteProject = async (req: any, res: Response) => {
 
   await prisma.project.delete({
     where: {
-      id: id,
+      id: pid,
     },
   });
 
