@@ -1,13 +1,13 @@
 import { Router } from "express";
 import * as authController from "../controllers/authController.js";
-// import * as userController from '../controllers/userController.js';
-// import { protect } from '../middleware/authMiddleware.js';
+import { protect } from "../middleware/authMiddleware.js";
 
 const authRouter: Router = Router();
 
 // Public routes
-authRouter.post("/", authController.signup);
+authRouter.post("/signup", authController.signup);
 authRouter.post("/login", authController.login);
-// authRouter.get('/:id', userController.getUser);
+authRouter.post("/logout", protect, authController.logout);
+authRouter.get("/me", protect, authController.onStartUser);
 
 export default authRouter;
