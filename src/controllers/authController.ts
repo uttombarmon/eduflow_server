@@ -20,19 +20,20 @@ const signToken = (id: string) => {
 };
 
 export const signup = async (req: Request, res: Response) => {
-  const { email, password, name } = req.body;
+  console.log("signup route called");
+  const { email, password, name, role } = req.body;
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
   const newUser = await prisma.user.create({
-    data: { email, password: hashedPassword, name },
+    data: { email, password: hashedPassword, name, role },
   });
 
   const { accessToken, refreshToken } = signToken(newUser.id);
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV == "production",
-    sameSite: "strict",
+    sameSite: "lax",
     maxAge: 1 * 24 * 60 * 60 * 1000, //1 day
   });
   res.status(201).json({
@@ -51,6 +52,7 @@ export const signup = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
+  console.log("login route called");
   const { email, password } = req.body;
   console.log("email: ", email, "password: ", password);
 
@@ -71,7 +73,7 @@ export const login = async (req: Request, res: Response) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV == "production",
-    sameSite: "strict",
+    sameSite: "lax",
     maxAge: 1 * 24 * 60 * 60 * 1000, //1 day
   });
   return res.status(200).json({
@@ -95,5 +97,24 @@ export const logout = (req: Request, res: Response) => {
   res.status(200).json({
     status: "success",
     message: "Logged out successfully",
+  });
+};
+
+export const onStartUser = async (req: Request, res: Response) => {
+  console.log("auth me route called");
+  const email = (req as any).user?.email;
+  if (!email) {
+    throw new AppError("Unathorized", 402);
+  }
+  const user: User = await prisma.user.findUnique({ where: { email } });
+  return res.status(200).json({
+    status: "success",
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+    },
   });
 };

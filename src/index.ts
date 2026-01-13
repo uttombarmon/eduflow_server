@@ -1,4 +1,6 @@
 import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
 import { AppError } from "./utils/AppError.js";
 import { globalErrorHandler } from "./middleware/errorHandler.js";
 import authRouter from "./routes/authRoutes.js";
@@ -6,7 +8,16 @@ import courseRouter from "./routes/courseRoutes.js";
 import profileRouter from "./routes/profileRoutes.js";
 
 const app = express();
+app.use(cookieParser());
 app.use(express.json());
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Change to your frontend URL
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // --- ROUTES ---
 app.use("/api/v1/auth", authRouter);
@@ -26,6 +37,6 @@ app.get("/", (req, res) => {
 // --- ERROR MIDDLEWARE ---
 app.use(globalErrorHandler);
 
-app.listen(3000, () => {
+app.listen(4000, () => {
   console.log("🚀 Express 5 Server: http://localhost:3000");
 });

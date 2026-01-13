@@ -13,9 +13,12 @@ export const protect = async (req: any, res: Response, next: NextFunction) => {
       req.headers.authorization.startsWith("Bearer")
     ) {
       token = req.headers.authorization.split(" ")[1];
+    } else if (req.cookies.refreshToken) {
+      token = req.cookies.refreshToken;
     }
 
     if (!token) {
+      console.log("not getting token");
       return next(new AppError("You are not logged in!", 401));
     }
 
