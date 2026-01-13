@@ -25,6 +25,62 @@ model User {
   posts           Post[]
   password        String?
   createdAt       DateTime @default(now())
+  profile         Profile?
+}
+
+model Profile {
+  id       String   @id @default(uuid())
+  bio      String?  @db.Text
+  headline String?
+  skills   String[]
+  hobbies  String[]
+
+  // Relations
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  experiences Experience[]
+  projects    Project[]
+  educations  Education[]
+
+  updatedAt DateTime @updatedAt
+}
+
+model Experience {
+  id          String    @id @default(uuid())
+  company     String
+  position    String
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  description String?   @db.Text
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?  @db.Text
+  link         String?
+  githubLink   String?
+  technologies String[]
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Education {
+  id           String    @id @default(uuid())
+  school       String
+  degree       String?
+  fieldOfStudy String?
+  startDate    DateTime
+  endDate      DateTime?
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
 //course model
