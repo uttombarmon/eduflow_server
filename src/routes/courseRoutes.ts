@@ -14,5 +14,17 @@ courseRouter.post(
   protect,
   courseController.makeCourse
 );
+// courseRouter.get("/:c_id/lesson", courseController.leson)
+courseRouter.post("/:c_id/lesson", protect, courseController.addLesson);
+courseRouter.patch(
+  "/:c_id/lesson/:l_id",
+  protect,
+  courseController.updateLesson
+);
+courseRouter.delete(
+  "/:csid/lesson/:l_id",
+  protect,
+  courseController.removeLesson
+);
 
 export default courseRouter;
