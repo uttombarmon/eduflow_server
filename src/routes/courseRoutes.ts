@@ -6,11 +6,13 @@ const courseRouter: Router = Router();
 
 // public routes
 courseRouter.get("/popular", courseController.getPopularCourses);
+courseRouter.get("/getcourses", courseController.getCourses);
 courseRouter.get("/:id", courseController.getCourseById);
 
 // private routes
+courseRouter.get("/tutor/courses", protect, courseController.getTutorCourses);
 courseRouter.post(
-  "/dashboard/makecourse",
+  "/tutor/makecourse",
   protect,
   courseController.makeCourse
 );
