@@ -6,7 +6,7 @@ import { AppError } from "../utils/AppError.js";
 export const getPopularCourses = async (req: Request, res: Response) => {
   try {
     //Extract query params for limit (default to 10)
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = parseInt(req.query.limit as string) || 8;
 
     // Query database
     // We order by studentsCount first, then rating as a tie-breaker
@@ -33,6 +33,45 @@ export const getPopularCourses = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Error fetching popular courses:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+// get courses
+export const getCourses = async (req: Request, res: Response) => {
+  try {
+    //Extract query params for limit (default to 10)
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 12;
+    const skip = (page - 1) * limit;
+
+    // Query database
+    const courses = await prisma.course.findMany({
+      take: limit,
+      orderBy: [{ studentsCount: "desc" }, { rating: "desc" }],
+      skip: skip,
+      include: {
+        instructor: {
+          select: {
+            name: true,
+            avatar: true,
+          },
+        },
+        _count: {
+          select: { lessons: true },
+        },
+      },
+    });
+
+    // Send response
+    return res.status(200).json({
+      success: true,
+      data: courses,
+    });
+  } catch (error) {
+    console.error("Error fetching courses:", error);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -88,6 +127,52 @@ export const getCourseById = async (req: Request, res: Response) => {
   }
 };
 
+//get tutor his courses
+export const getTutorCourses = async (req: Request, res: Response) => {
+  try {
+    const instructorId = (req as any).user?.id;
+
+    if (!instructorId) {
+      return res.status(401).json({ message: "Unauthorized: Tutor ID not found" });
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = 12;
+    const skip = (page - 1) * limit;
+
+    const [courses, totalCount] = await prisma.$transaction([
+      prisma.course.findMany({
+        where: { instructorId: instructorId },
+        orderBy: { createdAt: 'desc' },
+        skip: skip,
+        take: limit,
+      }),
+      prisma.course.count({
+        where: { instructorId: instructorId }
+      })
+    ]);
+
+    const hasNextPage = totalCount > page * limit;
+
+    return res.status(200).json({
+      success: true,
+      data: courses,
+      pagination: {
+        totalItems: totalCount,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNextPage
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching tutor courses:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error: Could not retrieve courses"
+    });
+  }
+};
 // make new course
 export const makeCourse = async (req: Request, res: Response) => {
   try {
