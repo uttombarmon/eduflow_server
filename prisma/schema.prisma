@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "./generated/prisma"
+  output   = "../src/generated"
 }
 
 datasource db {
@@ -29,11 +29,17 @@ model User {
 }
 
 model Profile {
-  id       String   @id @default(uuid())
-  bio      String?  @db.Text
-  headline String?
-  skills   String[]
-  hobbies  String[]
+  id          String   @id @default(uuid())
+  bio         String?  @db.Text
+  headline    String?
+  skills      String[]
+  hobbies     String[]
+  location    String?
+  phoneNumber String?
+  website     String?
+  github      String?
+  linkedin    String?
+  twitter     String?
 
   // Relations
   userId String @unique
@@ -85,7 +91,7 @@ model Education {
 
 //course model
 model Course {
-  id            String @id @default(uuid())
+  id            String   @id @default(uuid())
   title         String
   description   String
   thumbnail     String
@@ -93,8 +99,8 @@ model Course {
   totalDuration String
   level         String
   price         Float
-  rating        Float  @default(0)
-  studentsCount Int    @default(0)
+  rating        Float    @default(0)
+  studentsCount Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

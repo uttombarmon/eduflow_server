@@ -1,11 +1,14 @@
 import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import { AppError } from "../utils/AppError.js";
+import type { ExperienceType } from "../types/TypesAll.js";
 
 // add profile informations
 export const addProfile = async (req: any, res: Response) => {
   try {
     const userId = req.user.id;
+    if (!userId || userId == undefined)
+      throw new AppError("User Id not found", 404);
     const {
       bio,
       headline,
@@ -63,7 +66,8 @@ export const addProfile = async (req: any, res: Response) => {
 // get profile infomations
 export const getFullProfile = async (req: Request, res: Response) => {
   const { userId } = req.params;
-
+  if (!userId || userId != undefined)
+    throw new AppError("User Not available", 404);
   const fullProfile = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -127,44 +131,52 @@ export const addExperience = async (req: any, res: Response) => {
 };
 
 // update experience
-export const updateExperience = async (req: any, res: Response) => {
+export const updateExperience = async (
+  req: Request<{ ex_id: string }, {}, ExperienceType>,
+  res: Response,
+) => {
   try {
     const { ex_id } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      throw new AppError("Authentication required", 401);
+    }
+
     const { company, position, location, startDate, endDate, description } =
       req.body;
+    const updateData: any = {};
+    if (company !== undefined) updateData.company = company;
+    if (position !== undefined) updateData.position = position;
+    if (location !== undefined) updateData.location = location;
+    if (description !== undefined) updateData.description = description;
 
-    const existingExperience = await prisma.experience.findFirst({
+    // Handle Dates specifically
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (endDate !== undefined)
+      updateData.endDate = endDate ? new Date(endDate) : null;
+
+    const updatedExperience = await prisma.experience.update({
       where: {
         id: ex_id,
         profile: {
           userId: userId,
         },
       },
-    });
-
-    if (!existingExperience) {
-      throw new AppError("Experience record not found or unauthorized", 404);
-    }
-
-    const updatedExperience = await prisma.experience.update({
-      where: { id: ex_id },
-      data: {
-        company,
-        position,
-        location,
-        description,
-        startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : null,
-      },
+      data: updateData,
     });
 
     res.status(200).json({
       status: "success",
+      message: "Experience updated successfully",
       data: updatedExperience,
     });
   } catch (error: any) {
     console.error("Update Experience Error:", error);
+
+    if (error.code === "P2025") {
+      throw new AppError("Experience record not found or unauthorized", 404);
+    }
+
     if (error instanceof AppError) throw error;
     throw new AppError("Failed to update experience", 500);
   }
@@ -173,8 +185,9 @@ export const updateExperience = async (req: any, res: Response) => {
 // delete experience
 export const deleteExperience = async (req: any, res: Response) => {
   const { ex_id } = req.params;
-
-  await prisma.experience.delete({ where: { ex_id } });
+  if (!ex_id && ex_id != undefined)
+    throw new AppError("Failed to get experience id", 404);
+  await prisma.experience.delete({ where: { id: ex_id } });
   res.status(204).json({ status: "success", data: null });
 };
 
@@ -240,7 +253,7 @@ export const deleteProject = async (req: any, res: Response) => {
   if (!project) {
     throw new AppError(
       "Project not found or you do not have permission to delete it",
-      404
+      404,
     );
   }
 
