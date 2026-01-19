@@ -28,7 +28,7 @@ export const signup = async (req: Request, res: Response) => {
   const newUser = await prisma.user.create({
     data: { email, password: hashedPassword, name, role },
   });
-  if (newUser || newUser == null) {
+  if (!newUser || newUser == null) {
     throw new AppError("Signup unsuccessful!", 401);
   }
   const user = newUser as User;
@@ -36,7 +36,7 @@ export const signup = async (req: Request, res: Response) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV == "production",
-    sameSite: "lax",
+    sameSite: "none",
     maxAge: 1 * 24 * 60 * 60 * 1000, //1 day
   });
   res.status(201).json({
@@ -76,7 +76,7 @@ export const login = async (req: Request, res: Response) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV == "production",
-    sameSite: "lax",
+    sameSite: "none",
     maxAge: 1 * 24 * 60 * 60 * 1000, //1 day
   });
   return res.status(200).json({

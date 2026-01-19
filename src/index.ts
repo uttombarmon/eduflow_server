@@ -18,6 +18,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+const port = process.env.ENV_PORT || 4000;
 
 // --- ROUTES ---
 app.use("/api/v1/auth", authRouter);
@@ -35,6 +36,6 @@ app.get("/", (req, res) => {
 // --- ERROR MIDDLEWARE ---
 app.use(globalErrorHandler);
 
-app.listen(4000, "0.0.0.0", () => {
+app.listen(Number(port), "0.0.0.0", () => {
   console.log("🚀 Express 5 Server: http://localhost:4000");
 });
