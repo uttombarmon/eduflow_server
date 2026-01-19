@@ -18,7 +18,7 @@ export const protect = async (req: any, res: Response, next: NextFunction) => {
     }
 
     if (!token) {
-      console.log("not getting token");
+      console.log("token is missing!");
       return next(new AppError("You are not logged in!", 401));
     }
 
@@ -34,7 +34,7 @@ export const protect = async (req: any, res: Response, next: NextFunction) => {
 
     if (!currentUser) {
       return next(
-        new AppError("The user belonging to this token no longer exists.", 401)
+        new AppError("The user belonging to this token no longer exists.", 401),
       );
     }
 
