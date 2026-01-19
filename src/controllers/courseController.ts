@@ -178,6 +178,67 @@ export const getTutorCourses = async (req: Request, res: Response) => {
   }
 };
 // make new course
+// export const makeCourse = async (req: Request, res: Response) => {
+//   try {
+//     const {
+//       title,
+//       description,
+//       thumbnail,
+//       category,
+//       totalDuration,
+//       level,
+//       price,
+//     } = req.body;
+
+//     const instructorId = (req as any).user?.id;
+
+//     if (!instructorId) {
+//       return res
+//         .status(401)
+//         .json({ message: "Unauthorized: Instructor ID missing" });
+//     }
+
+//     // Use Prisma's nested create to handle Course and Lessons at once
+//     const newCourse = await prisma.course.create({
+//       data: {
+//         title,
+//         description,
+//         thumbnail,
+//         category,
+//         totalDuration,
+//         level,
+//         price: parseFloat(price),
+//         instructorId,
+//         // Nested creation of lessons
+//         lessons: {
+//           create: lessons.map((lesson: any) => ({
+//             title: lesson.title,
+//             duration: lesson.duration,
+//             videoUrl: lesson.videoUrl,
+//             content: lesson.content,
+//             isCompleted: false,
+//           })),
+//         },
+//       },
+//       include: {
+//         lessons: true, // Return the lessons in the response
+//       },
+//     });
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Course uploaded successfully",
+//       data: newCourse,
+//     });
+//   } catch (error) {
+//     console.error("Error uploading course:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to upload course",
+//       error: error instanceof Error ? error.message : "Unknown error",
+//     });
+//   }
+// };
 export const makeCourse = async (req: Request, res: Response) => {
   try {
     const {
@@ -188,18 +249,13 @@ export const makeCourse = async (req: Request, res: Response) => {
       totalDuration,
       level,
       price,
-      lessons,
     } = req.body;
+    const instructorId = (req as any).user.id;
 
-    const instructorId = (req as any).user?.id;
-
-    if (!instructorId) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: Instructor ID missing" });
+    if (!title || !price || !instructorId) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Use Prisma's nested create to handle Course and Lessons at once
     const newCourse = await prisma.course.create({
       data: {
         title,
@@ -210,34 +266,15 @@ export const makeCourse = async (req: Request, res: Response) => {
         level,
         price: parseFloat(price),
         instructorId,
-        // Nested creation of lessons
-        lessons: {
-          create: lessons.map((lesson: any) => ({
-            title: lesson.title,
-            duration: lesson.duration,
-            videoUrl: lesson.videoUrl,
-            content: lesson.content,
-            isCompleted: false,
-          })),
-        },
-      },
-      include: {
-        lessons: true, // Return the lessons in the response
       },
     });
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
-      message: "Course uploaded successfully",
       data: newCourse,
     });
-  } catch (error) {
-    console.error("Error uploading course:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to upload course",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -319,7 +356,6 @@ export const updateLesson = async (req: any, res: Response) => {
         duration,
         videoUrl,
         content,
-        isCompleted,
       },
     });
 
