@@ -12,11 +12,11 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:3000", // Change to your frontend URL
+    origin: ["http://localhost:3000", "https://eduflow-rust.vercel.app"], // Change to your frontend URL
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 
 // --- ROUTES ---
@@ -37,6 +37,6 @@ app.get("/", (req, res) => {
 // --- ERROR MIDDLEWARE ---
 app.use(globalErrorHandler);
 
-app.listen(4000, () => {
-  console.log("🚀 Express 5 Server: http://localhost:3000");
+app.listen(4000, "0.0.0.0", () => {
+  console.log("🚀 Express 5 Server: http://localhost:4000");
 });
