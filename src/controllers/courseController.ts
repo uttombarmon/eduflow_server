@@ -241,18 +241,10 @@ export const getTutorCourses = async (req: Request, res: Response) => {
 // };
 export const makeCourse = async (req: Request, res: Response) => {
   try {
-    const {
-      title,
-      description,
-      thumbnail,
-      category,
-      totalDuration,
-      level,
-      price,
-    } = req.body;
+    const { title, description, thumbnail, category, level, price } = req.body;
     const instructorId = (req as any).user.id;
 
-    if (!title || !price || !instructorId) {
+    if (!title || price == undefined || price == null || !instructorId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -262,7 +254,7 @@ export const makeCourse = async (req: Request, res: Response) => {
         description,
         thumbnail,
         category,
-        totalDuration,
+        totalDuration: "",
         level,
         price: parseFloat(price),
         instructorId,
