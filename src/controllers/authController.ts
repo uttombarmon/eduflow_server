@@ -20,7 +20,7 @@ const signToken = (id: string) => {
 };
 
 export const signup = async (req: Request, res: Response) => {
-  console.log("signup route called");
+  console.log("Sign up api called...");
   const { email, password, name, role } = req.body;
 
   const hashedPassword = await bcrypt.hash(password, 12);
@@ -55,9 +55,9 @@ export const signup = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  console.log("login route called");
+  console.log("login api called...");
   const { email, password } = req.body;
-  console.log("email: ", email, "password: ", password);
+  // console.log("email: ", email, "password: ", password);
 
   if (!email || !password)
     throw new AppError("Please provide email and password", 400);
@@ -92,6 +92,7 @@ export const login = async (req: Request, res: Response) => {
   });
 };
 export const logout = (req: Request, res: Response) => {
+  console.log("log out api called...");
   res.cookie("refreshToken", "", {
     httpOnly: true,
     expires: new Date(0),
@@ -104,7 +105,7 @@ export const logout = (req: Request, res: Response) => {
 };
 
 export const onStartUser = async (req: Request, res: Response) => {
-  console.log("auth me route called");
+  console.log("auth me api called...");
   const email = (req as any).user?.email;
   if (!email) {
     throw new AppError("Unathorized", 402);

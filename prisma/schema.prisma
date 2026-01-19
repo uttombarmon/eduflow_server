@@ -7,7 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
-//enums
+// enums
 enum UserRole {
   student
   tutor
@@ -26,6 +26,10 @@ model User {
   password        String?
   createdAt       DateTime @default(now())
   profile         Profile?
+
+  // Tracking student enrollments and specific lesson completions
+  enrollments    Enrollment[]
+  lessonProgress LessonProgress[]
 }
 
 model Profile {
@@ -41,7 +45,6 @@ model Profile {
   linkedin    String?
   twitter     String?
 
-  // Relations
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -89,7 +92,7 @@ model Education {
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
-//course model
+// course model
 model Course {
   id            String   @id @default(uuid())
   title         String
@@ -104,24 +107,54 @@ model Course {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Relations
   instructorId String
-  instructor   User     @relation("CourseInstructor", fields: [instructorId], references: [id])
-  lessons      Lesson[]
+  instructor   User   @relation("CourseInstructor", fields: [instructorId], references: [id])
+
+  lessons     Lesson[]
+  enrollments Enrollment[]
 }
 
 model Lesson {
-  id          String  @id @default(uuid())
-  title       String
-  duration    String
-  videoUrl    String
-  content     String
-  isCompleted Boolean @default(false)
+  id       String @id @default(uuid())
+  title    String
+  duration String
+  videoUrl String
+  content  String
+  order    Int    @default(0)
 
-  // Relations
   courseId String
   course   Course @relation(fields: [courseId], references: [id])
-  quizzes  Quiz[]
+
+  quizzes        Quiz[]
+  lessonProgress LessonProgress[]
+}
+
+// Tracks if a specific user has finished a specific lesson
+model LessonProgress {
+  id          String   @id @default(uuid())
+  userId      String
+  lessonId    String
+  isCompleted Boolean  @default(true)
+  completedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}
+
+// Main Enrollment record for a student in a course
+model Enrollment {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  progress  Float    @default(0)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
 }
 
 model Quiz {
