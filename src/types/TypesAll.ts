@@ -11,6 +11,14 @@ export interface User {
   password?: string;
   createdAt: Date;
 }
+export interface ExperienceType {
+  company?: string;
+  position?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string | null;
+  description?: string;
+}
 
 export interface Lesson {
   id: string;

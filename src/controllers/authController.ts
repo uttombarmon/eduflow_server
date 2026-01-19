@@ -28,8 +28,11 @@ export const signup = async (req: Request, res: Response) => {
   const newUser = await prisma.user.create({
     data: { email, password: hashedPassword, name, role },
   });
-
-  const { accessToken, refreshToken } = signToken(newUser.id);
+  if (newUser || newUser == null) {
+    throw new AppError("Signup unsuccessful!", 401);
+  }
+  const user = newUser as User;
+  const { accessToken, refreshToken } = signToken(user.id);
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV == "production",
@@ -41,11 +44,11 @@ export const signup = async (req: Request, res: Response) => {
     accessToken,
     data: {
       user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        avatar: newUser.avatar,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
       },
     },
   });
@@ -59,7 +62,7 @@ export const login = async (req: Request, res: Response) => {
   if (!email || !password)
     throw new AppError("Please provide email and password", 400);
 
-  const user: User = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (
     !user ||
@@ -106,15 +109,21 @@ export const onStartUser = async (req: Request, res: Response) => {
   if (!email) {
     throw new AppError("Unathorized", 402);
   }
-  const user: User = await prisma.user.findUnique({ where: { email } });
-  return res.status(200).json({
-    status: "success",
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-    },
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user != null && (user as User)) {
+    return res.status(200).json({
+      status: "success",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+      },
+    });
+  }
+  return res.status(401).json({
+    status: "Not Found User",
+    user: null,
   });
 };

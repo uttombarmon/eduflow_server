@@ -83,6 +83,9 @@ export const getCourses = async (req: Request, res: Response) => {
 export const getCourseById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    if (!id || id != undefined) {
+      throw new AppError("Tutor id not found", 404);
+    }
 
     const course = await prisma.course.findUnique({
       where: {
@@ -133,7 +136,9 @@ export const getTutorCourses = async (req: Request, res: Response) => {
     const instructorId = (req as any).user?.id;
 
     if (!instructorId) {
-      return res.status(401).json({ message: "Unauthorized: Tutor ID not found" });
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: Tutor ID not found" });
     }
 
     const page = parseInt(req.query.page as string) || 1;
@@ -143,13 +148,13 @@ export const getTutorCourses = async (req: Request, res: Response) => {
     const [courses, totalCount] = await prisma.$transaction([
       prisma.course.findMany({
         where: { instructorId: instructorId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: skip,
         take: limit,
       }),
       prisma.course.count({
-        where: { instructorId: instructorId }
-      })
+        where: { instructorId: instructorId },
+      }),
     ]);
 
     const hasNextPage = totalCount > page * limit;
@@ -161,15 +166,14 @@ export const getTutorCourses = async (req: Request, res: Response) => {
         totalItems: totalCount,
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),
-        hasNextPage
-      }
+        hasNextPage,
+      },
     });
-
   } catch (error) {
     console.error("Error fetching tutor courses:", error);
     return res.status(500).json({
       success: false,
-      message: "Server Error: Could not retrieve courses"
+      message: "Server Error: Could not retrieve courses",
     });
   }
 };
@@ -255,7 +259,7 @@ export const addLesson = async (req: any, res: Response) => {
     if (course.instructorId !== userId && req.user.role !== "admin") {
       throw new AppError(
         "You are not authorized to add lessons to this course",
-        403
+        403,
       );
     }
 
@@ -356,7 +360,7 @@ export const removeLesson = async (req: any, res: Response) => {
     if (!isInstructor && !isAdmin) {
       throw new AppError(
         "You do not have permission to delete this lesson",
-        403
+        403,
       );
     }
 
