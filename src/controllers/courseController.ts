@@ -178,67 +178,6 @@ export const getTutorCourses = async (req: Request, res: Response) => {
   }
 };
 // make new course
-// export const makeCourse = async (req: Request, res: Response) => {
-//   try {
-//     const {
-//       title,
-//       description,
-//       thumbnail,
-//       category,
-//       totalDuration,
-//       level,
-//       price,
-//     } = req.body;
-
-//     const instructorId = (req as any).user?.id;
-
-//     if (!instructorId) {
-//       return res
-//         .status(401)
-//         .json({ message: "Unauthorized: Instructor ID missing" });
-//     }
-
-//     // Use Prisma's nested create to handle Course and Lessons at once
-//     const newCourse = await prisma.course.create({
-//       data: {
-//         title,
-//         description,
-//         thumbnail,
-//         category,
-//         totalDuration,
-//         level,
-//         price: parseFloat(price),
-//         instructorId,
-//         // Nested creation of lessons
-//         lessons: {
-//           create: lessons.map((lesson: any) => ({
-//             title: lesson.title,
-//             duration: lesson.duration,
-//             videoUrl: lesson.videoUrl,
-//             content: lesson.content,
-//             isCompleted: false,
-//           })),
-//         },
-//       },
-//       include: {
-//         lessons: true, // Return the lessons in the response
-//       },
-//     });
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Course uploaded successfully",
-//       data: newCourse,
-//     });
-//   } catch (error) {
-//     console.error("Error uploading course:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to upload course",
-//       error: error instanceof Error ? error.message : "Unknown error",
-//     });
-//   }
-// };
 export const makeCourse = async (req: Request, res: Response) => {
   try {
     const { title, description, thumbnail, category, level, price } = req.body;
@@ -405,5 +344,41 @@ export const removeLesson = async (req: any, res: Response) => {
     console.error("Remove Lesson Error:", error);
     if (error instanceof AppError) throw error;
     throw new AppError("Failed to remove lesson", 500);
+  }
+};
+export const deleteCourse = async (req: Request, res: Response) => {
+  const { courseId } = req.params;
+  const instructorId = (req as any).user.id;
+  if (!courseId) {
+    throw new AppError("The course id not found", 404);
+  }
+
+  try {
+    // Find the course and check ownership
+    const course = await prisma.course.findFirst({
+      where: { id: courseId as string },
+    });
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    if (course.instructorId !== instructorId) {
+      return res.status(403).json({ message: "Unauthorized: Access denied" });
+    }
+
+    // Perform the deletion
+    await prisma.course.delete({
+      where: { id: courseId as string },
+    });
+
+    // Return success
+    return res.status(200).json({
+      success: true,
+      message: "Course and associated lessons deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting course:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -11,22 +11,23 @@ courseRouter.get("/:id", courseController.getCourseById);
 
 // private routes
 courseRouter.get("/tutor/courses", protect, courseController.getTutorCourses);
-courseRouter.post(
-  "/tutor/makecourse",
+courseRouter.post("/tutor/makecourse", protect, courseController.makeCourse);
+courseRouter.delete(
+  "/tutor/course/:courseId",
   protect,
-  courseController.makeCourse
+  courseController.deleteCourse,
 );
 // courseRouter.get("/:c_id/lesson", courseController.leson)
 courseRouter.post("/:c_id/lesson", protect, courseController.addLesson);
 courseRouter.patch(
   "/:c_id/lesson/:l_id",
   protect,
-  courseController.updateLesson
+  courseController.updateLesson,
 );
 courseRouter.delete(
   "/:csid/lesson/:l_id",
   protect,
-  courseController.removeLesson
+  courseController.removeLesson,
 );
 
 export default courseRouter;
