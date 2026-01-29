@@ -152,11 +152,12 @@ model LessonProgress {
 
 // Main Enrollment record for a student in a course
 model Enrollment {
-  id        String   @id @default(uuid())
-  userId    String
-  courseId  String
-  progress  Float    @default(0)
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  userId       String
+  courseId     String
+  progress     Float    @default(0)
+  lastAccessed DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
