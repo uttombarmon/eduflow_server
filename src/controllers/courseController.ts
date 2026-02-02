@@ -83,13 +83,13 @@ export const getCourses = async (req: Request, res: Response) => {
 export const getCourseById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    if (!id || id != undefined) {
+    if (!id || id === undefined) {
       throw new AppError("Tutor id not found", 404);
     }
 
     const course = await prisma.course.findUnique({
       where: {
-        id: id,
+        id: id as string,
       },
       include: {
         // Include instructor details (excluding sensitive data like password)
@@ -117,10 +117,7 @@ export const getCourseById = async (req: Request, res: Response) => {
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: course,
-    });
+    return res.status(200).json(course);
   } catch (error) {
     console.error("Error fetching course:", error);
     return res.status(500).json({
