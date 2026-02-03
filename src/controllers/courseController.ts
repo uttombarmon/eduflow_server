@@ -135,22 +135,47 @@ export const getTutorCourses = async (req: Request, res: Response) => {
     if (!instructorId) {
       return res
         .status(401)
-        .json({ message: "Unauthorized: Tutor ID not found" });
+        .json({ success: false, message: "Unauthorized: Tutor ID not found" });
     }
 
+    const search =
+      typeof req.query.search === "string" ? req.query.search : undefined;
+    const status =
+      typeof req.query.status === "string" ? req.query.status : undefined;
     const page = parseInt(req.query.page as string) || 1;
     const limit = 12;
     const skip = (page - 1) * limit;
 
+    const whereClause: any = {
+      instructorId: instructorId,
+    };
+    if (search) {
+      whereClause.title = { contains: search as string, mode: "insensitive" };
+    }
+
+    if (status && status !== "ALL") {
+      whereClause.status = status;
+    }
+    // const whereClause = {
+    //   instructorId: instructorId,
+    //   ...(search && {
+    //     title: {
+    //       contains: search,
+    //       mode: "insensitive" as const,
+    //     },
+    //   }),
+    //   ...(status && { status: status }),
+    // };
+
     const [courses, totalCount] = await prisma.$transaction([
       prisma.course.findMany({
-        where: { instructorId: instructorId },
+        where: whereClause,
         orderBy: { createdAt: "desc" },
         skip: skip,
         take: limit,
       }),
       prisma.course.count({
-        where: { instructorId: instructorId },
+        where: whereClause,
       }),
     ]);
 
