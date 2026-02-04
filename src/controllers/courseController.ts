@@ -83,6 +83,7 @@ export const getCourses = async (req: Request, res: Response) => {
 export const getCourseById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log("curse Id: ", id);
     if (!id || id === undefined) {
       throw new AppError("Tutor id not found", 404);
     }
@@ -156,16 +157,6 @@ export const getTutorCourses = async (req: Request, res: Response) => {
     if (status && status !== "ALL") {
       whereClause.status = status;
     }
-    // const whereClause = {
-    //   instructorId: instructorId,
-    //   ...(search && {
-    //     title: {
-    //       contains: search,
-    //       mode: "insensitive" as const,
-    //     },
-    //   }),
-    //   ...(status && { status: status }),
-    // };
 
     const [courses, totalCount] = await prisma.$transaction([
       prisma.course.findMany({
@@ -202,7 +193,8 @@ export const getTutorCourses = async (req: Request, res: Response) => {
 // make new course
 export const makeCourse = async (req: Request, res: Response) => {
   try {
-    const { title, description, thumbnail, category, level, price } = req.body;
+    const { title, description, thumbnail, category, level, price, status } =
+      req.body;
     const instructorId = (req as any).user.id;
 
     if (!title || price == undefined || price == null || !instructorId) {
@@ -219,6 +211,7 @@ export const makeCourse = async (req: Request, res: Response) => {
         level,
         price: parseFloat(price),
         instructorId,
+        status,
       },
     });
 
@@ -234,12 +227,19 @@ export const makeCourse = async (req: Request, res: Response) => {
 // add lession
 export const addLesson = async (req: any, res: Response) => {
   try {
-    const { courseId } = req.params;
+    const { c_id: id } = req.params;
+    console.log("course id: ", id);
     const { title, duration, videoUrl, content } = req.body;
     const userId = req.user.id;
+    if (!userId || userId == undefined) {
+      throw new Error("Unauthorized!");
+    }
+    if (!id || id == undefined) {
+      throw new Error("Not found courseId!");
+    }
 
     const course = await prisma.course.findUnique({
-      where: { id: courseId },
+      where: { id },
     });
 
     if (!course) {
@@ -259,7 +259,7 @@ export const addLesson = async (req: any, res: Response) => {
         duration,
         videoUrl,
         content,
-        courseId: courseId,
+        courseId: id,
       },
     });
 
