@@ -161,6 +161,11 @@ export const getTutorCourses = async (req: Request, res: Response) => {
     const [courses, totalCount] = await prisma.$transaction([
       prisma.course.findMany({
         where: whereClause,
+        include: {
+          _count: {
+            select: { lessons: true },
+          },
+        },
         orderBy: { createdAt: "desc" },
         skip: skip,
         take: limit,
@@ -327,7 +332,7 @@ export const updateLesson = async (req: any, res: Response) => {
 //remove lesson
 export const removeLesson = async (req: any, res: Response) => {
   try {
-    const { id } = req.params;
+    const { l_id: id } = req.params;
     const userId = req.user.id;
 
     const lesson = await prisma.lesson.findUnique({
