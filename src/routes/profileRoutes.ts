@@ -3,10 +3,10 @@ import * as profileController from "../controllers/profileController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const profileRouter: Router = Router();
-profileRouter.get("/:id", profileController.getFullProfile);
 profileRouter.get("/getprojectsbytech", profileController.getProjectsByTech);
 
 // private routes
+profileRouter.get("/:id", protect, profileController.getFullProfile);
 profileRouter.post("/:id", protect, profileController.addProfile);
 profileRouter.patch("/:id", protect, profileController.updateProfileInfo);
 profileRouter.post("/:id/experience", protect, profileController.addExperience);

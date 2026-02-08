@@ -65,11 +65,11 @@ export const addProfile = async (req: any, res: Response) => {
 };
 // get profile infomations
 export const getFullProfile = async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  if (!userId || userId != undefined)
+  const { id: userId } = req.params;
+  if (!userId || userId == undefined)
     throw new AppError("User Not available", 404);
   const fullProfile = await prisma.user.findUnique({
-    where: { id: userId },
+    where: { id: userId as string },
     select: {
       name: true,
       avatar: true,
