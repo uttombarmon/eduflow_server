@@ -7,6 +7,7 @@ const authRouter: Router = Router();
 // Public routes
 authRouter.post("/signup", authController.signup);
 authRouter.post("/login", authController.login);
+// private routes
 authRouter.post("/logout", protect, authController.logout);
 authRouter.get("/me", protect, authController.onStartUser);
 

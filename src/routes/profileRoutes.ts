@@ -9,27 +9,27 @@ profileRouter.get("/getprojectsbytech", profileController.getProjectsByTech);
 // private routes
 profileRouter.post("/:id", protect, profileController.addProfile);
 profileRouter.patch("/:id", protect, profileController.updateProfileInfo);
-profileRouter.post("/:id/experience", profileController.addExperience);
+profileRouter.post("/:id/experience", protect, profileController.addExperience);
 profileRouter.patch(
   "/:id/experience/:ex_id",
   protect,
-  profileController.updateExperience
+  profileController.updateExperience,
 );
 profileRouter.delete(
   "/:id/experience/:ex_id",
   protect,
-  profileController.deleteExperience
+  profileController.deleteExperience,
 );
 profileRouter.post("/:id/project", protect, profileController.addProject);
 profileRouter.patch(
   "/:id/project/:pid",
   protect,
-  profileController.updateProject
+  profileController.updateProject,
 );
 profileRouter.delete(
   "/:id/project/:pid",
   protect,
-  profileController.deleteProject
+  profileController.deleteProject,
 );
 
 export default profileRouter;
