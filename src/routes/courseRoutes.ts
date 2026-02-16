@@ -7,6 +7,7 @@ const courseRouter: Router = Router();
 // public routes
 courseRouter.get("/popular", courseController.getPopularCourses);
 courseRouter.get("/getcourses", courseController.getCourses);
+courseRouter.get("/:id/details", courseController.getCourseWithDetails);
 courseRouter.get("/:id", courseController.getCourseById);
 
 // private routes

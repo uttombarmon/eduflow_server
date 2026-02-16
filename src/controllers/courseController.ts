@@ -80,7 +80,7 @@ export const getCourses = async (req: Request, res: Response) => {
 };
 
 // get course by id
-export const getCourseById = async (req: Request, res: Response) => {
+export const getCourseWithDetails = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     console.log("curse Id: ", id);
@@ -93,7 +93,6 @@ export const getCourseById = async (req: Request, res: Response) => {
         id: id as string,
       },
       include: {
-        // Include instructor details (excluding sensitive data like password)
         instructor: {
           select: {
             id: true,
@@ -103,10 +102,45 @@ export const getCourseById = async (req: Request, res: Response) => {
           },
         },
         lessons: {
+          select: {
+            title: true,
+          },
           orderBy: {
-            id: "asc",
+            order: "asc",
           },
         },
+      },
+    });
+
+    // Check if course exists
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    return res.status(200).json(course);
+  } catch (error) {
+    console.error("Error fetching course:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const getCourseById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log("curse Id: ", id);
+    if (!id || id === undefined) {
+      throw new AppError("Tutor id not found", 404);
+    }
+
+    const course = await prisma.course.findUnique({
+      where: {
+        id: id as string,
       },
     });
 
@@ -228,7 +262,6 @@ export const makeCourse = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // delete course
 export const deleteCourse = async (req: Request, res: Response) => {

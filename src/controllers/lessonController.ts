@@ -2,6 +2,38 @@ import prisma from "../lib/prisma.js";
 import { AppError } from "../utils/AppError.js";
 import type { Response } from "express";
 
+// get lessons
+export const getLessons = async (req: any, res: Response) => {
+  try {
+    console.log("getting lessons");
+    const { c_id: id } = req.params;
+    const userId = req.user.id;
+    if (!userId || userId == undefined) {
+      throw new Error("Unauthorized!");
+    }
+    if (!id || id == undefined) {
+      throw new Error("Not found courseId!");
+    }
+
+    const lessons = await prisma.lesson.findMany({
+      where: { courseId: id as string },
+    });
+
+    if (!lessons) {
+      throw new AppError("Lesson not found", 404);
+    }
+
+    res.status(201).json({
+      status: "success",
+      data: lessons,
+    });
+  } catch (error: any) {
+    console.error("Lesson Error:", error);
+    if (error instanceof AppError) throw error;
+    throw new AppError("Failed to query lessons", 500);
+  }
+};
+
 // add lession
 export const addLesson = async (req: any, res: Response) => {
   try {
@@ -58,7 +90,7 @@ export const updateLesson = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const { title, duration, videoUrl, content, isCompleted } = req.body;
+    const { title, duration, videoUrl, content } = req.body;
 
     const lesson = await prisma.lesson.findUnique({
       where: { id },
