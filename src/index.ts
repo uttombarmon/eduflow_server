@@ -6,6 +6,7 @@ import authRouter from "./routes/authRoutes.js";
 import courseRouter from "./routes/courseRoutes.js";
 import profileRouter from "./routes/profileRoutes.js";
 import lessonRouter from "./routes/lessonRoute.js";
+import tDashboardRouter from "./routes/tutorDashboardRoutes.js";
 
 const app = express();
 app.use(cookieParser());
@@ -25,6 +26,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/course", courseRouter);
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/lessons", lessonRouter);
+app.use("/api/v1/tutor/dashboard", tDashboardRouter);
 
 app.get("/health", async (req, res) => {
   console.log("Healthy!");
