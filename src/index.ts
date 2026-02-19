@@ -28,6 +28,8 @@ app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/lessons", lessonRouter);
 app.use("/api/v1/tutor/dashboard", tDashboardRouter);
 
+app.use("/api/v1/student")
+
 app.get("/health", async (req, res) => {
   console.log("Healthy!");
   return res.send("Healthy😊!");

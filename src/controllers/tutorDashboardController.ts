@@ -42,7 +42,7 @@ export async function Dasboard(req: any, res: Response) {
 
     
 
-    console.log("data", totalEarnings, earnings, activeStudents, averageRating);
+    // console.log("data", totalEarnings, earnings, activeStudents, averageRating);
     res.status(200).json({
       totalEarnings,
       earningPercentage: earnings,
