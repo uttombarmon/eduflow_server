@@ -7,6 +7,7 @@ import courseRouter from "./routes/courseRoutes.js";
 import profileRouter from "./routes/profileRoutes.js";
 import lessonRouter from "./routes/lessonRoute.js";
 import tDashboardRouter from "./routes/tutorDashboardRoutes.js";
+import studentRoute from "./routes/studentRoutes.js";
 
 const app = express();
 app.use(cookieParser());
@@ -28,7 +29,7 @@ app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/lessons", lessonRouter);
 app.use("/api/v1/tutor/dashboard", tDashboardRouter);
 
-app.use("/api/v1/student")
+app.use("/api/v1/student", studentRoute);
 
 app.get("/health", async (req, res) => {
   console.log("Healthy!");

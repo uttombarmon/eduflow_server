@@ -80,3 +80,26 @@ export interface Post {
   title: string;
   body: string;
 }
+
+// types/api.ts
+export interface DashboardData {
+  stats: {
+    label: string;
+    value: string;
+    icon: "BookOpen" | "Clock" | "Star" | "Award";
+    color: string;
+    trend: string;
+  }[];
+  activeCourses: {
+    id: string;
+    title: string;
+    thumbnail: string;
+    progress: number;
+  }[];
+  recommendations: {
+    id: string;
+    title: string;
+    time: string;
+    tag: string;
+  }[];
+}
