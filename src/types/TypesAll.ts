@@ -45,6 +45,14 @@ export interface Course {
   lessons: Lesson[];
   progress?: number;
 }
+export interface Enrollment {
+  id: string;
+  userId: string;
+  courseId: string;
+  progress: number;
+  lastAccessed: Date;
+  createdAt: Date;
+}
 export interface CourseCategories {
   categories: string[];
 }

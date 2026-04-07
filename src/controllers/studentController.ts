@@ -1,4 +1,4 @@
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import type { DashboardData } from "../types/TypesAll.js";
 
@@ -11,34 +11,42 @@ export const getStudentDashboardData = async (req: Request, res: Response) => {
     }
 
     // 1. Fetch data in parallel for performance
-    const [enrollments, totalCompletedLessons, userProfile] = await Promise.all([
-      prisma.enrollment.findMany({
-        where: { userId },
-        include: {
-          course: {
-            select: { id: true, title: true, thumbnail: true, totalDuration: true, category: true }
-          }
-        },
-        orderBy: { lastAccessed: 'desc' }
-      }),
-      prisma.lessonProgress.count({
-        where: { userId, isCompleted: true }
-      }),
-      prisma.profile.findUnique({
-        where: { userId },
-        select: { skills: true }
-      })
-    ]);
+    const [enrollments, totalCompletedLessons, userProfile] = await Promise.all(
+      [
+        prisma.enrollment.findMany({
+          where: { userId },
+          include: {
+            course: {
+              select: {
+                id: true,
+                title: true,
+                thumbnail: true,
+                totalDuration: true,
+                category: true,
+              },
+            },
+          },
+          orderBy: { lastAccessed: "desc" },
+        }),
+        prisma.lessonProgress.count({
+          where: { userId, isCompleted: true },
+        }),
+        prisma.profile.findUnique({
+          where: { userId },
+          select: { skills: true },
+        }),
+      ],
+    );
 
     // 2. Format Active Courses
     const activeCourses = enrollments
-      .filter(enrol => enrol.progress < 100)
+      .filter((enrol) => enrol.progress < 100)
       .slice(0, 3)
-      .map(enrol => ({
+      .map((enrol) => ({
         id: enrol.course.id,
         title: enrol.course.title,
         thumbnail: enrol.course.thumbnail,
-        progress: enrol.progress
+        progress: enrol.progress,
       }));
 
     // 3. Simple Recommendation Logic
@@ -47,68 +55,73 @@ export const getStudentDashboardData = async (req: Request, res: Response) => {
     const recommendedCourses = await prisma.course.findMany({
       where: {
         category: recentCategory,
-        status: 'publish',
-        enrollments: { none: { userId } } // Don't suggest courses already enrolled
+        status: "publish",
+        enrollments: { none: { userId } }, // Don't suggest courses already enrolled
       },
       take: 2,
-      select: { id: true, title: true, totalDuration: true, level: true }
+      select: { id: true, title: true, totalDuration: true, level: true },
     });
 
     // 4. Construct Stats Array
-    const stats: Array<{ label: string; value: string; icon: "BookOpen" | "Clock" | "Star" | "Award"; color: string; trend: string }> = [
+    const stats: Array<{
+      label: string;
+      value: string;
+      icon: "BookOpen" | "Clock" | "Star" | "Award";
+      color: string;
+      trend: string;
+    }> = [
       {
         label: "Courses Enrolled",
         value: enrollments.length.toString(),
         icon: "BookOpen",
         color: "text-indigo-600",
-        trend: "+1 this month"
+        trend: "+1 this month",
       },
       {
         label: "Lessons Finished",
         value: totalCompletedLessons.toString(),
         icon: "Clock",
         color: "text-sky-600",
-        trend: "Steady progress"
+        trend: "Steady progress",
       },
       {
         label: "Avg. Course Progress",
-        value: enrollments.length 
+        value: enrollments.length
           ? `${Math.round(enrollments.reduce((acc, curr) => acc + curr.progress, 0) / enrollments.length)}%`
           : "0%",
         icon: "Star",
         color: "text-amber-600",
-        trend: "+5% increase"
+        trend: "+5% increase",
       },
       {
         label: "Certificates",
-        value: enrollments.filter(e => e.progress === 100).length.toString(),
+        value: enrollments.filter((e) => e.progress === 100).length.toString(),
         icon: "Award",
         color: "text-emerald-600",
-        trend: "Keep going!"
-      }
+        trend: "Keep going!",
+      },
     ];
 
     const responseData: DashboardData = {
       stats,
       activeCourses,
-      recommendations: recommendedCourses.map(c => ({
+      recommendations: recommendedCourses.map((c) => ({
         id: c.id,
         title: c.title,
         time: c.totalDuration,
-        tag: c.level
-      }))
+        tag: c.level,
+      })),
     };
 
     return res.status(200).json({
       success: true,
-      data: responseData
+      data: responseData,
     });
-
   } catch (error) {
     console.error("Dashboard Controller Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Internal Server Error" 
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
     });
   }
 };

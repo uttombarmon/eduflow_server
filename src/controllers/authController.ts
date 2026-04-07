@@ -22,36 +22,51 @@ const signToken = (id: string) => {
 export const signup = async (req: Request, res: Response) => {
   console.log("Sign up api called...");
   const { email, password, name, role } = req.body;
-
-  const hashedPassword = await bcrypt.hash(password, 12);
-
-  const newUser = await prisma.user.create({
-    data: { email, password: hashedPassword, name, role },
-  });
-  if (!newUser || newUser == null) {
-    throw new AppError("Signup unsuccessful!", 401);
+  const exitUser = await prisma.user.findUnique({ where: { email } });
+  if (exitUser) {
+    res.status(409).json({
+      status: "failed",
+      message: "User already exits!",
+    });
+    return;
   }
-  const user = newUser as User;
-  const { accessToken, refreshToken } = signToken(user.id);
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV == "production",
-    sameSite: process.env.NODE_ENV == "production" ? "none" : "lax",
-    maxAge: 1 * 24 * 60 * 60 * 1000, //1 day
-  });
-  res.status(201).json({
-    status: "success",
-    accessToken,
-    data: {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
+  try {
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const newUser = await prisma.user.create({
+      data: { email, password: hashedPassword, name, role },
+    });
+    if (!newUser || newUser == null) {
+      throw new AppError("Signup unsuccessful!", 401);
+    }
+    const user = newUser as User;
+    const { accessToken, refreshToken } = signToken(user.id);
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV == "production",
+      sameSite: process.env.NODE_ENV == "production" ? "none" : "lax",
+      maxAge: 1 * 24 * 60 * 60 * 1000, //1 day
+    });
+    res.status(201).json({
+      status: "success",
+      accessToken,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+        },
       },
-    },
-  });
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "failed",
+      message: "Signup unsuccessful!",
+    });
+    throw new AppError("Internel server Error", 500);
+  }
 };
 
 export const login = async (req: Request, res: Response) => {
