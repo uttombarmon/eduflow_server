@@ -1,6 +1,8 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
 import type { DashboardData } from "../types/TypesAll.js";
+import { catchAsync } from "../utils/catchAsync.js";
+import { AppError } from "../utils/AppError.js";
 
 export const getStudentDashboardData = async (req: Request, res: Response) => {
   try {
@@ -125,3 +127,80 @@ export const getStudentDashboardData = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Enroll a student in a course
+ * POST /api/student/enroll
+ */
+export const enrollInCourse = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = (req as any).user?.id;
+  const { courseId } = req.body;
+
+  if (!courseId) {
+    return next(new AppError("Course ID is required", 400));
+  }
+
+  // 1. Check if course exists and is published
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { id: true, status: true, studentsCount: true }
+  });
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  if (course.status !== "publish") {
+    return next(new AppError("Course is not available for enrollment", 400));
+  }
+
+  // 2. Check if already enrolled
+  const existingEnrollment = await prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: {
+        userId,
+        courseId
+      }
+    }
+  });
+
+  if (existingEnrollment) {
+    return next(new AppError("You are already enrolled in this course", 400));
+  }
+
+  // 3. Create enrollment and increment studentsCount in a transaction
+  const enrollment = await prisma.$transaction(async (tx) => {
+    const newEnrollment = await tx.enrollment.create({
+      data: {
+        userId,
+        courseId,
+        progress: 0,
+      },
+      include: {
+        course: {
+          select: {
+            title: true,
+            thumbnail: true,
+          }
+        }
+      }
+    });
+
+    await tx.course.update({
+      where: { id: courseId },
+      data: {
+        studentsCount: {
+          increment: 1
+        }
+      }
+    });
+
+    return newEnrollment;
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Enrolled successfully",
+    data: enrollment
+  });
+});
