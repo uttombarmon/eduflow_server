@@ -20,6 +20,12 @@ enum CourseStatus {
   archive
 }
 
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
 // user model
 model User {
   id              String   @id @default(uuid())
@@ -36,6 +42,7 @@ model User {
   // Tracking student enrollments and specific lesson completions
   enrollments    Enrollment[]
   lessonProgress LessonProgress[]
+  payments       Payment[]
 }
 
 model Profile {
@@ -119,6 +126,7 @@ model Course {
 
   lessons     Lesson[]
   enrollments Enrollment[]
+  payments    Payment[]
 }
 
 model Lesson {
@@ -196,4 +204,21 @@ model Post {
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id       String        @id @default(uuid())
+  amount   Float
+  currency String // USD, BDT
+  status   PaymentStatus @default(PENDING)
+  method   String        @default("MOCK")
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

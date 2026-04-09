@@ -168,12 +168,113 @@ export const enrollInCourse = catchAsync(async (req: Request, res: Response, nex
     return next(new AppError("You are already enrolled in this course", 400));
   }
 
-  // 3. Create enrollment and increment studentsCount in a transaction
-  const enrollment = await prisma.$transaction(async (tx) => {
-    const newEnrollment = await tx.enrollment.create({
+  // 3. Handle Free vs Paid enrollment
+  if (course.price === 0) {
+    // Create enrollment and increment studentsCount in a transaction
+    const enrollment = await prisma.$transaction(async (tx) => {
+      const newEnrollment = await tx.enrollment.create({
+        data: {
+          userId,
+          courseId,
+          progress: 0,
+        },
+        include: {
+          course: {
+            select: {
+              title: true,
+              thumbnail: true,
+            }
+          }
+        }
+      });
+
+      await tx.course.update({
+        where: { id: courseId },
+        data: {
+          studentsCount: {
+            increment: 1
+          }
+        }
+      });
+
+      return newEnrollment;
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Enrolled successfully (Free)",
+      data: enrollment
+    });
+  } else {
+    // Paid course - create a PENDING payment record
+    const { currency } = req.body;
+    const selectedCurrency = currency === "BDT" ? "BDT" : "USD"; // Support both as requested
+
+    const payment = await prisma.payment.create({
       data: {
         userId,
         courseId,
+        amount: course.price,
+        currency: selectedCurrency,
+        status: "PENDING",
+        method: "MOCK"
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment required for this course",
+      paymentRequired: true,
+      data: {
+        paymentId: payment.id,
+        courseId: course.id,
+        courseTitle: course.title,
+        amount: course.price,
+        currency: selectedCurrency,
+        method: "MOCK"
+      }
+    });
+  }
+});
+
+/**
+ * Verify a mock payment and enroll the student
+ * POST /api/student/verify-payment
+ */
+export const verifyMockPayment = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = (req as any).user?.id;
+  const { paymentId } = req.body;
+
+  if (!paymentId) {
+    return next(new AppError("Payment ID is required", 400));
+  }
+
+  // 1. Find the payment and verify it belongs to the user
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+  });
+
+  if (!payment || payment.userId !== userId) {
+    return next(new AppError("Payment record not found", 404));
+  }
+
+  if (payment.status === "SUCCEEDED") {
+    return next(new AppError("This payment has already been processed", 400));
+  }
+
+  // 2. Perform atomic transaction: Update payment status and create enrollment
+  const enrollment = await prisma.$transaction(async (tx) => {
+    // Update payment
+    await tx.payment.update({
+      where: { id: paymentId },
+      data: { status: "SUCCEEDED" }
+    });
+
+    // Create enrollment
+    const newEnrollment = await tx.enrollment.create({
+      data: {
+        userId,
+        courseId: payment.courseId,
         progress: 0,
       },
       include: {
@@ -186,8 +287,9 @@ export const enrollInCourse = catchAsync(async (req: Request, res: Response, nex
       }
     });
 
+    // Increment course student count
     await tx.course.update({
-      where: { id: courseId },
+      where: { id: payment.courseId },
       data: {
         studentsCount: {
           increment: 1
@@ -200,7 +302,110 @@ export const enrollInCourse = catchAsync(async (req: Request, res: Response, nex
 
   res.status(201).json({
     success: true,
-    message: "Enrolled successfully",
+    message: "Payment verified and enrollment successful",
     data: enrollment
+  });
+});
+
+/**
+ * Get all courses the student is enrolled in
+ * GET /api/student/enrolled-courses
+ */
+export const getEnrolledCourses = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { userId },
+    include: {
+      course: {
+        include: {
+          instructor: {
+            select: { name: true, avatar: true }
+          },
+          _count: {
+            select: { lessons: true }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  res.status(200).json({
+    success: true,
+    data: enrollments
+  });
+});
+
+/**
+ * Update progress of a lesson
+ * POST /api/student/course/:courseId/lesson/:lessonId/progress
+ */
+export const updateLessonProgress = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const userId = (req as any).user?.id;
+  const { courseId, lessonId } = req.params;
+
+  // 1. Verify enrollment
+  const enrollment = await prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: { userId, courseId }
+    }
+  });
+
+  if (!enrollment) {
+    return next(new AppError("You are not enrolled in this course", 403));
+  }
+
+  // 2. Mark lesson as completed (Upsert)
+  await prisma.lessonProgress.upsert({
+    where: {
+      userId_lessonId: { userId, lessonId }
+    },
+    update: { isCompleted: true },
+    create: {
+      userId,
+      lessonId,
+      isCompleted: true
+    }
+  });
+
+  // 3. Recalculate course progress
+  // Get all lessons for this course
+  const totalLessons = await prisma.lesson.count({
+    where: { courseId }
+  });
+
+  // Get completed lessons for this course
+  const completedLessons = await prisma.lessonProgress.count({
+    where: {
+      userId,
+      lesson: { courseId },
+      isCompleted: true
+    }
+  });
+
+  const progressPercentage = totalLessons > 0 
+    ? (completedLessons / totalLessons) * 100 
+    : 0;
+
+  // 4. Update core enrollment progress
+  const updatedEnrollment = await prisma.enrollment.update({
+    where: {
+      userId_courseId: { userId, courseId }
+    },
+    data: {
+      progress: progressPercentage,
+      lastAccessed: new Date()
+    }
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Lesson progress updated",
+    data: {
+      progress: updatedEnrollment.progress,
+      completedLessons,
+      totalLessons
+    }
   });
 });
