@@ -1,0 +1,5 @@
+ignoredBuiltDependencies:
+  - '@prisma/engines'
+  - '@swc/core'
+  - esbuild
+  - prisma

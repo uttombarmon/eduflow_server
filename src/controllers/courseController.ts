@@ -185,7 +185,7 @@ export const getTutorCourses = async (req: Request, res: Response) => {
       instructorId: instructorId,
     };
     if (search) {
-      whereClause.title = { contains: search as string, mode: "insensitive" };
+      whereClause.title = { contains: search, mode: "insensitive" };
     }
 
     if (status && status !== "ALL") {
@@ -196,8 +196,20 @@ export const getTutorCourses = async (req: Request, res: Response) => {
       prisma.course.findMany({
         where: whereClause,
         include: {
+          // ✨ Updated: Added deeply nested count for modules and lessons
           _count: {
-            select: { lessons: true },
+            select: {
+              modules: true, // Total modules in this course
+            },
+          },
+          // We include the modules relation but only select its lesson count
+          // to calculate the total aggregate lessons per course cleanly.
+          modules: {
+            select: {
+              _count: {
+                select: { lessons: true }, // Total lessons in each module
+              },
+            },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -209,11 +221,32 @@ export const getTutorCourses = async (req: Request, res: Response) => {
       }),
     ]);
 
+    // 🛠️ Map over the courses to format the data and sum up the total lessons
+    const formattedCourses = courses.map((course) => {
+      // Sum the lesson counts from all modules belonging to this course
+      const totalLessons = course.modules.reduce(
+        (sum, currentModule) => sum + currentModule._count.lessons,
+        0,
+      );
+
+      // Extract the original course fields, excluding the raw modules array
+      // used for calculation, and clean up the structure.
+      const { modules, ...courseData } = course;
+
+      return {
+        ...courseData,
+        _count: {
+          modules: course._count.modules,
+          lessons: totalLessons, // 🔥 Added total lessons here
+        },
+      };
+    });
+
     const hasNextPage = totalCount > page * limit;
 
     return res.status(200).json({
       success: true,
-      data: courses,
+      data: formattedCourses, // 😉 Returns the clean, formatted array
       pagination: {
         totalItems: totalCount,
         currentPage: page,
@@ -232,25 +265,94 @@ export const getTutorCourses = async (req: Request, res: Response) => {
 // make new course
 export const makeCourse = async (req: Request, res: Response) => {
   try {
-    const { title, description, thumbnail, category, level, price, status } =
-      req.body;
+    const {
+      title,
+      description,
+      thumbnail,
+      category,
+      level,
+      price,
+      status,
+      modules,
+    } = req.body;
     const instructorId = (req as any).user.id;
 
-    if (!title || price == undefined || price == null || !instructorId) {
+    if (
+      !title ||
+      price === undefined ||
+      price === null ||
+      !instructorId ||
+      !category
+    ) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // 1. Generate slug for the Course
+    const courseSlug = title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+
+    // 2. Generate slug for the Category (required by your Category model)
+    const categorySlug = category
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+
+    // 3. Execute the Prisma write using connectOrCreate
     const newCourse = await prisma.course.create({
       data: {
         title,
+        slug: courseSlug,
         description,
         thumbnail,
-        category,
-        totalDuration: "",
-        level,
+        level: level?.toUpperCase(),
         price: parseFloat(price),
-        instructorId,
         status,
+
+        // ✨ MAGIC HAPPENS HERE: Connect or Create the category dynamically
+        category: {
+          connectOrCreate: {
+            where: { name: category }, // Looks for an exact match by unique name
+            create: {
+              name: category,
+              slug: categorySlug,
+            },
+          },
+        },
+
+        modules: {
+          create:
+            modules?.map((module: any) => ({
+              title: module.title,
+              lessons: {
+                create:
+                  module.lessons?.map((lesson: any) => ({
+                    title: lesson.title,
+                    content: lesson.content,
+                    videoUrl: lesson.videoUrl,
+                  })) || [],
+              },
+            })) || [],
+        },
+
+        instructor: {
+          connect: {
+            id: instructorId,
+          },
+        },
+      },
+      include: {
+        category: true, // Includes category details in the API response
+        modules: {
+          include: {
+            lessons: true,
+          },
+        },
       },
     });
 
@@ -259,6 +361,7 @@ export const makeCourse = async (req: Request, res: Response) => {
       data: newCourse,
     });
   } catch (error: any) {
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 };

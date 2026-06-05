@@ -14,6 +14,13 @@ enum UserRole {
   admin
 }
 
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  ALL_LEVELS
+}
+
 enum CourseStatus {
   publish
   draft
@@ -33,16 +40,17 @@ model User {
   email           String   @unique
   role            UserRole @default(student)
   avatar          String?
-  authoredCourses Course[] @relation("CourseInstructor")
-  posts           Post[]
   password        String?
   createdAt       DateTime @default(now())
   profile         Profile?
+  authoredCourses Course[] @relation("CourseInstructor")
+  posts           Post[]
 
   // Tracking student enrollments and specific lesson completions
   enrollments    Enrollment[]
   lessonProgress LessonProgress[]
   payments       Payment[]
+  quizAttempts   QuizAttempt[]
 }
 
 model Profile {
@@ -105,65 +113,98 @@ model Education {
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
-// course model
+model Category {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  slug    String   @unique
+  courses Course[]
+}
+
 model Course {
   id            String       @id @default(uuid())
   title         String
-  description   String
+  slug          String       @unique // Essential for SEO (e.g., /courses/react-101)
+  description   String       @db.Text // Use Text for longer content
   thumbnail     String
-  category      String
-  totalDuration String
-  level         String
-  price         Float
+  price         Float // Consider Int (storing cents) if connecting to Stripe
   rating        Float        @default(0)
   studentsCount Int          @default(0)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  status        CourseStatus @default(publish)
+  level         CourseLevel  @default(BEGINNER)
+  status        CourseStatus @default(draft)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
   instructorId String
   instructor   User   @relation("CourseInstructor", fields: [instructorId], references: [id])
 
-  lessons     Lesson[]
+  modules     Module[] // Grouped structure
   enrollments Enrollment[]
   payments    Payment[]
+
+  @@index([instructorId])
+  @@index([categoryId])
+}
+
+// NEW: Groups lessons together (e.g., "Module 1: Getting Started")
+model Module {
+  id    String @id @default(uuid())
+  title String
+  order Int    @default(0)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  lessons Lesson[]
+
+  @@index([courseId])
 }
 
 model Lesson {
-  id       String @id @default(uuid())
-  title    String
-  duration String
-  videoUrl String
-  content  String
-  order    Int    @default(0)
+  id            String  @id @default(uuid())
+  title         String
+  content       String? @db.Text
+  videoUrl      String?
+  durationInSec Int? // Int is better for UI math (e.g., formatting to MM:SS)
+  isPublished   Boolean @default(false)
+  order         Int     @default(0)
 
-  courseId String
-  course   Course @relation(fields: [courseId], references: [id])
+  chapterId String
+  chapter   Module @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   quizzes        Quiz[]
   lessonProgress LessonProgress[]
+
+  @@index([chapterId])
 }
 
-// Tracks if a specific user has finished a specific lesson
 model LessonProgress {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   userId      String
   lessonId    String
-  isCompleted Boolean  @default(true)
-  completedAt DateTime @default(now())
+  isCompleted Boolean   @default(false) // Changed default to false
+  completedAt DateTime?
+
+  // Track where they paused the video (optional but great for UX)
+  watchTimeSec Int @default(0)
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
 }
 
-// Main Enrollment record for a student in a course
 model Enrollment {
   id           String   @id @default(uuid())
   userId       String
   courseId     String
-  progress     Float    @default(0)
+  progress     Float    @default(0) // 0 to 100 percentage
   lastAccessed DateTime @default(now())
   createdAt    DateTime @default(now())
 
@@ -171,23 +212,47 @@ model Enrollment {
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
 }
 
 model Quiz {
-  id        String         @id @default(uuid())
-  lessonId  String
-  lesson    Lesson         @relation(fields: [lessonId], references: [id])
+  id       String @id @default(uuid())
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
   questions QuizQuestion[]
+  attempts  QuizAttempt[] // Link to user submissions
+
+  @@index([lessonId])
 }
 
 model QuizQuestion {
   id            String   @id @default(uuid())
   question      String
   options       String[]
-  correctAnswer Int
+  correctAnswer Int // Index of the correct option
 
   quizId String
-  quiz   Quiz   @relation(fields: [quizId], references: [id])
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+}
+
+// NEW: Tracks the student's actual performance on a quiz
+model QuizAttempt {
+  id        String   @id @default(uuid())
+  userId    String
+  quizId    String
+  score     Float // e.g., 80.5 (%)
+  passed    Boolean
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([quizId])
 }
 
 model Notification {
