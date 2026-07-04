@@ -16,7 +16,7 @@ export const getLessons = async (req: any, res: Response) => {
     }
 
     const lessons = await prisma.lesson.findMany({
-      where: { courseId: id as string },
+      where: { id: id as string },
     });
 
     if (!lessons) {
@@ -66,10 +66,9 @@ export const addLesson = async (req: any, res: Response) => {
     const lesson = await prisma.lesson.create({
       data: {
         title,
-        duration,
         videoUrl,
         content,
-        courseId: id,
+        moduleId: id as string,
       },
     });
 

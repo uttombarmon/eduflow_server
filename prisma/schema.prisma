@@ -173,13 +173,13 @@ model Lesson {
   isPublished   Boolean @default(false)
   order         Int     @default(0)
 
-  chapterId String
-  chapter   Module @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   quizzes        Quiz[]
   lessonProgress LessonProgress[]
 
-  @@index([chapterId])
+  @@index([moduleId])
 }
 
 model LessonProgress {

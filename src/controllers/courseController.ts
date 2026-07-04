@@ -184,30 +184,24 @@ export const getTutorCourses = async (req: Request, res: Response) => {
     const whereClause: any = {
       instructorId: instructorId,
     };
+
     if (search) {
       whereClause.title = { contains: search, mode: "insensitive" };
     }
 
-    if (status && status !== "ALL") {
+    if (status && status.toLowerCase() !== "all") {
       whereClause.status = status;
     }
+    console.log(whereClause);
 
     const [courses, totalCount] = await prisma.$transaction([
       prisma.course.findMany({
         where: whereClause,
         include: {
-          // ✨ Updated: Added deeply nested count for modules and lessons
-          _count: {
-            select: {
-              modules: true, // Total modules in this course
-            },
-          },
-          // We include the modules relation but only select its lesson count
-          // to calculate the total aggregate lessons per course cleanly.
           modules: {
             select: {
               _count: {
-                select: { lessons: true }, // Total lessons in each module
+                select: { lessons: true },
               },
             },
           },
@@ -221,32 +215,30 @@ export const getTutorCourses = async (req: Request, res: Response) => {
       }),
     ]);
 
-    // 🛠️ Map over the courses to format the data and sum up the total lessons
+    console.log("responses: ", courses);
+
     const formattedCourses = courses.map((course) => {
-      // Sum the lesson counts from all modules belonging to this course
       const totalLessons = course.modules.reduce(
         (sum, currentModule) => sum + currentModule._count.lessons,
         0,
       );
 
-      // Extract the original course fields, excluding the raw modules array
-      // used for calculation, and clean up the structure.
       const { modules, ...courseData } = course;
 
       return {
         ...courseData,
         _count: {
-          modules: course._count.modules,
-          lessons: totalLessons, // 🔥 Added total lessons here
+          modules: modules.length, // 🎯 Fixed: Use the array length instead of the broken _count object
+          lessons: totalLessons,
         },
       };
     });
 
     const hasNextPage = totalCount > page * limit;
-
+    console.log(formattedCourses);
     return res.status(200).json({
       success: true,
-      data: formattedCourses, // 😉 Returns the clean, formatted array
+      data: formattedCourses,
       pagination: {
         totalItems: totalCount,
         currentPage: page,
