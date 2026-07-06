@@ -13,6 +13,7 @@ courseRouter.get("/:id", courseController.getCourseById);
 // private routes
 courseRouter.get("/tutor/courses", protect, courseController.getTutorCourses);
 courseRouter.post("/tutor/makecourse", protect, courseController.makeCourse);
+courseRouter.put("/update/:id", protect, courseController.updateTheCourse);
 courseRouter.delete(
   "/tutor/course/:courseId",
   protect,

@@ -1,6 +1,7 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import { AppError } from "../utils/AppError.js";
+import { slugify } from "../utils/SlugHelper.js";
 
 // get popular courses
 export const getPopularCourses = async (req: Request, res: Response) => {
@@ -358,6 +359,118 @@ export const makeCourse = async (req: Request, res: Response) => {
   }
 };
 
+// update course
+export const updateTheCourse = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params as { id: string };
+    const courseUpdatedData = req.body;
+
+    if (!id) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Course ID is required" });
+    }
+
+    const {
+      title,
+      description,
+      thumbnail,
+      price,
+      level,
+      status,
+      categoryId,
+      modules,
+    } = courseUpdatedData;
+
+    const updatedCourse = await prisma.$transaction(async (tx) => {
+      const courseUpdateData: any = {
+        title,
+        slug:
+          courseUpdatedData?.slug ||
+          `${slugify(title || "")}-${id.slice(0, 5)}`,
+        description,
+        thumbnail,
+        price: parseFloat(price) || 0,
+        level: level?.toUpperCase(),
+        status,
+      };
+
+      if (categoryId) {
+        courseUpdateData.category = { connect: { id: categoryId } };
+      }
+
+      await tx.course.update({
+        where: { id },
+        data: courseUpdateData,
+      });
+
+      // 3. Re-sync nested modules/lessons if passed
+      if (modules && Array.isArray(modules)) {
+        // Clear out old modules (Cascades automatically deletes old lessons based on your schema)
+        await tx.module.deleteMany({
+          where: { courseId: id },
+        });
+
+        // Re-create modules and lessons with explicit order indices
+        for (let i = 0; i < modules.length; i++) {
+          const mod = modules[i];
+
+          await tx.module.create({
+            data: {
+              title: mod.title,
+              order: i,
+              courseId: id,
+              lessons: {
+                create: (mod.lessons || []).map(
+                  (lesson: any, index: number) => ({
+                    title: lesson.title,
+                    content: lesson.content || "",
+                    videoUrl: lesson.videoUrl || null,
+                    durationInSec: parseInt(lesson.durationInSec) || 0,
+                    isPublished: lesson.isPublished ?? true,
+                    order: index,
+                  }),
+                ),
+              },
+            },
+          });
+        }
+      }
+
+      // 4. Return updated course layout with confirmed sorting order
+      return await tx.course.findUnique({
+        where: { id },
+        include: {
+          modules: {
+            orderBy: { order: "asc" },
+            include: {
+              lessons: { orderBy: { order: "asc" } },
+            },
+          },
+        },
+      });
+    });
+
+    // 5. Send proper Express response format
+    return res.status(200).json({
+      success: true,
+      message: "Course curriculum and details saved successfully",
+      data: updatedCourse,
+    });
+  } catch (error: any) {
+    console.error("Prisma Transaction Error updating course:", error);
+
+    // Send structural JSON error back to the web client
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Internal Database Error",
+    });
+  }
+};
 // delete course
 export const deleteCourse = async (req: Request, res: Response) => {
   const { courseId } = req.params;
