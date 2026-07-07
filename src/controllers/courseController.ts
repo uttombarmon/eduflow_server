@@ -134,14 +134,33 @@ export const getCourseWithDetails = async (req: Request, res: Response) => {
 export const getCourseById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    console.log("curse Id: ", id);
-    if (!id || id === undefined) {
-      throw new AppError("Tutor id not found", 404);
+    console.log("Fetching Course ID:", id);
+
+    if (!id || id === "undefined") {
+      return res.status(400).json({
+        success: false,
+        message: "Course ID is required",
+      });
     }
 
     const course = await prisma.course.findUnique({
       where: {
         id: id as string,
+      },
+      include: {
+        category: true,
+        modules: {
+          orderBy: {
+            order: "asc",
+          },
+          include: {
+            lessons: {
+              orderBy: {
+                order: "asc",
+              },
+            },
+          },
+        },
       },
     });
 
@@ -152,13 +171,17 @@ export const getCourseById = async (req: Request, res: Response) => {
         message: "Course not found",
       });
     }
-
-    return res.status(200).json(course);
-  } catch (error) {
-    console.error("Error fetching course:", error);
+    console.log(course);
+    return res.status(200).json({
+      success: true,
+      message: "Course retrieved successfully",
+      data: course,
+    });
+  } catch (error: any) {
+    console.error("Error fetching course with curriculum:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: error.message || "Internal Server Error",
     });
   }
 };
@@ -408,14 +431,11 @@ export const updateTheCourse = async (
         data: courseUpdateData,
       });
 
-      // 3. Re-sync nested modules/lessons if passed
       if (modules && Array.isArray(modules)) {
-        // Clear out old modules (Cascades automatically deletes old lessons based on your schema)
         await tx.module.deleteMany({
           where: { courseId: id },
         });
 
-        // Re-create modules and lessons with explicit order indices
         for (let i = 0; i < modules.length; i++) {
           const mod = modules[i];
 
@@ -455,7 +475,6 @@ export const updateTheCourse = async (
       });
     });
 
-    // 5. Send proper Express response format
     return res.status(200).json({
       success: true,
       message: "Course curriculum and details saved successfully",
@@ -464,7 +483,6 @@ export const updateTheCourse = async (
   } catch (error: any) {
     console.error("Prisma Transaction Error updating course:", error);
 
-    // Send structural JSON error back to the web client
     return res.status(500).json({
       success: false,
       error: error.message || "Internal Database Error",
