@@ -21,8 +21,12 @@ export const getPopularCourses = async (req: Request, res: Response) => {
             avatar: true,
           },
         },
-        _count: {
-          select: { lessons: true },
+        modules: {
+          select: {
+            _count: {
+              select: { lessons: true },
+            },
+          },
         },
       },
     });
@@ -60,8 +64,12 @@ export const getCourses = async (req: Request, res: Response) => {
             avatar: true,
           },
         },
-        _count: {
-          select: { lessons: true },
+        modules: {
+          select: {
+            _count: {
+              select: { lessons: true },
+            },
+          },
         },
       },
     });
@@ -171,7 +179,7 @@ export const getCourseById = async (req: Request, res: Response) => {
         message: "Course not found",
       });
     }
-    console.log(course);
+    // console.log(course);
     return res.status(200).json({
       success: true,
       message: "Course retrieved successfully",
@@ -524,5 +532,24 @@ export const deleteCourse = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error deleting course:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getCourseCategories = async (req: Request, res: Response) => {
+  // console.log("calling categories.....");
+  try {
+    const categories = await prisma.category.findMany();
+    // console.log(categories);
+    return res.status(200).json({
+      success: true,
+      message: "Categories fetched successfully",
+      data: categories,
+    });
+  } catch (err: any) {
+    console.log(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Something went wrong",
+    });
   }
 };

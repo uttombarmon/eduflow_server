@@ -9,6 +9,7 @@ courseRouter.get("/popular", courseController.getPopularCourses);
 courseRouter.get("/getcourses", courseController.getCourses);
 courseRouter.get("/:id/details", courseController.getCourseWithDetails);
 courseRouter.get("/:id", courseController.getCourseById);
+courseRouter.get("/categories/all", courseController.getCourseCategories);
 
 // private routes
 courseRouter.get("/tutor/courses", protect, courseController.getTutorCourses);

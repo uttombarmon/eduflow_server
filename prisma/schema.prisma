@@ -123,10 +123,10 @@ model Category {
 model Course {
   id            String       @id @default(uuid())
   title         String
-  slug          String       @unique // Essential for SEO (e.g., /courses/react-101)
-  description   String       @db.Text // Use Text for longer content
+  slug          String       @unique
+  description   String       @db.Text
   thumbnail     String
-  price         Float // Consider Int (storing cents) if connecting to Stripe
+  price         Float
   rating        Float        @default(0)
   studentsCount Int          @default(0)
   level         CourseLevel  @default(BEGINNER)
@@ -140,9 +140,10 @@ model Course {
   category   Category @relation(fields: [categoryId], references: [id])
 
   instructorId String
-  instructor   User   @relation("CourseInstructor", fields: [instructorId], references: [id])
+  // UPDATED: When an instructor is deleted, their authored courses are wiped
+  instructor   User   @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
 
-  modules     Module[] // Grouped structure
+  modules     Module[]
   enrollments Enrollment[]
   payments    Payment[]
 
@@ -150,7 +151,6 @@ model Course {
   @@index([categoryId])
 }
 
-// NEW: Groups lessons together (e.g., "Module 1: Getting Started")
 model Module {
   id    String @id @default(uuid())
   title String
@@ -169,7 +169,7 @@ model Lesson {
   title         String
   content       String? @db.Text
   videoUrl      String?
-  durationInSec Int? // Int is better for UI math (e.g., formatting to MM:SS)
+  durationInSec Int?
   isPublished   Boolean @default(false)
   order         Int     @default(0)
 
@@ -186,10 +186,9 @@ model LessonProgress {
   id          String    @id @default(uuid())
   userId      String
   lessonId    String
-  isCompleted Boolean   @default(false) // Changed default to false
+  isCompleted Boolean   @default(false)
   completedAt DateTime?
 
-  // Track where they paused the video (optional but great for UX)
   watchTimeSec Int @default(0)
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -204,7 +203,7 @@ model Enrollment {
   id           String   @id @default(uuid())
   userId       String
   courseId     String
-  progress     Float    @default(0) // 0 to 100 percentage
+  progress     Float    @default(0)
   lastAccessed DateTime @default(now())
   createdAt    DateTime @default(now())
 
@@ -222,7 +221,7 @@ model Quiz {
   lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   questions QuizQuestion[]
-  attempts  QuizAttempt[] // Link to user submissions
+  attempts  QuizAttempt[]
 
   @@index([lessonId])
 }
@@ -231,7 +230,7 @@ model QuizQuestion {
   id            String   @id @default(uuid())
   question      String
   options       String[]
-  correctAnswer Int // Index of the correct option
+  correctAnswer Int
 
   quizId String
   quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
@@ -239,12 +238,11 @@ model QuizQuestion {
   @@index([quizId])
 }
 
-// NEW: Tracks the student's actual performance on a quiz
 model QuizAttempt {
   id        String   @id @default(uuid())
   userId    String
   quizId    String
-  score     Float // e.g., 80.5 (%)
+  score     Float
   passed    Boolean
   createdAt DateTime @default(now())
 
@@ -268,13 +266,14 @@ model Post {
   body  String
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  // UPDATED: When a user accounts disappears, wipe their forum posts
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
   id       String        @id @default(uuid())
   amount   Float
-  currency String // USD, BDT
+  currency String
   status   PaymentStatus @default(PENDING)
   method   String        @default("MOCK")
 
